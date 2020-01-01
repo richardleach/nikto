@@ -5038,12 +5038,34 @@ sub _stream_socket_alloc {
     my ( $xr, $wh ) = @_;
 
     if ($LW2_CAN_IPv6) {
-        my ($err, @results) = getaddrinfo($xr->{chost}, $xr->{cport}, $xr->{sock_hints} );
+        
+        my ($ip, $port);
+        
+        if ( defined $wh->{whisker}->{bind_socket} ) {
+            $port = $wh->{whisker}->{bind_port} || 0;
+            
+            $port = 0 if ( $port eq '*'); # most OS will find a spare port for us
+            
+            return _stream_err( $xr, 0, 'Bad bind_port value' ) if
+                ( $port !~ /^(?:[0-9]+)$/ );
+                
+            $ip = (defined $wh->{whisker}->{bind_addr}) ?
+                $wh->{whisker}->{bind_addr} :
+                INADDR_ANY ;
+            
+            $xr->{sock_hints}->{flags} += AI_PASSIVE;
+            
+        } else {
+            ($ip,$port) = ($xr->{chost}, $xr->{cport});
+        }
+        
+        my ($err, @results) = getaddrinfo($ip, $port, $xr->{sock_hints} );
         return _stream_err( $xr, 0, "getaddrinfo problems ($err)" ) if $err;
         return _stream_err( $xr, 0, 'getaddrinfo problems (no sockets)' )
           if ( scalar(@results) < 1);
 
-        # Ideally, we should call connect() on each @result but LW2 isn't currently set up to make that easy...
+        # Ideally, we should call connect() on each @result
+        # but LW2 isn't currently set up to make that easy...
         return _stream_err( $xr, 0, 'socket() problems' )
           if (
             !socket(
@@ -5073,45 +5095,44 @@ sub _stream_socket_alloc {
                   )
                 );
         }
-    }
 
-    if ( defined $wh->{whisker}->{bind_socket} ) {
-    # TODO - add IPv6 support; will need to set AI_PASSIVE in the getaddrinfo call
-        my $p = $wh->{whisker}->{bind_port} || '*';
-        $p =~ tr/0-9*//cd;
-        return _stream_err( $xr, 0, 'Bad bind_port value' )
-          if ( $p eq '' );
-        my $a = INADDR_ANY;
-        $a = inet_aton( $wh->{whisker}->{bind_addr} )
-          if ( defined $wh->{whisker}->{bind_addr} );
-        return _stream_err( $xr, 0, 'Bad bind_addr value' )
-          if ( !defined $a );
-        if ( $p =~ tr/*// ) {
-            for ( $p = 14011 ; $p < 65535 ; $p++ ) {
-                if ( !bind( $xr->{sock}, sockaddr_in( $p, $a ) ) ) {
-                    return _stream_err( $xr, 0, 'bind() on socket failed' )
-                      if ( $! ne 'Address already in use' );
+        if ( defined $wh->{whisker}->{bind_socket} ) {
+            my $p = $wh->{whisker}->{bind_port} || '*';
+            $p =~ tr/0-9*//cd;
+            return _stream_err( $xr, 0, 'Bad bind_port value' )
+              if ( $p eq '' );
+            my $a = INADDR_ANY;
+            $a = inet_aton( $wh->{whisker}->{bind_addr} )
+              if ( defined $wh->{whisker}->{bind_addr} );
+            return _stream_err( $xr, 0, 'Bad bind_addr value' )
+              if ( !defined $a );
+            if ( $p =~ tr/*// ) {
+                for ( $p = 14011 ; $p < 65535 ; $p++ ) {
+                    if ( !bind( $xr->{sock}, sockaddr_in( $p, $a ) ) ) {
+                        return _stream_err( $xr, 0, 'bind() on socket failed' )
+                          if ( $! ne 'Address already in use' );
+                    }
+                    else {
+                        last;
+                    }
                 }
-                else {
-                    last;
-                }
+                return _stream_err( $xr, 0, 'bind() cannot find open socket' )
+                  if ( $p >= 65535 );
             }
-            return _stream_err( $xr, 0, 'bind() cannot find open socket' )
-              if ( $p >= 65535 );
+            else {
+                return _stream_err( $xr, 0, 'bind() on socket failed' )
+                  if ( !bind( $xr->{sock}, sockaddr_in( $p, $a ) ) );
+            }
         }
-        else {
-            return _stream_err( $xr, 0, 'bind() on socket failed' )
-              if ( !bind( $xr->{sock}, sockaddr_in( $p, $a ) ) );
+
+        if ( !defined $xr->{iaton} ) {
+            $xr->{iaton} = inet_aton( $xr->{chost} );
+            return _stream_err( $xr, 0, 'can\'t resolve hostname' )
+              if ( !defined $xr->{iaton} );
         }
-    }
 
-    # This block not used if ($LW2_CAN_IPv6)
-    if ( !defined $xr->{iaton} ) {
-        $xr->{iaton} = inet_aton( $xr->{chost} );
-        return _stream_err( $xr, 0, 'can\'t resolve hostname' )
-          if ( !defined $xr->{iaton} );
     }
-
+    
     $xr->{socket_alloc}++;
     return 1;
 }

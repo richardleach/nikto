@@ -422,11 +422,11 @@ sub dump_target_info {
     }
 
     if ($CLI{'plugins'} ne '@@NONE') {
-        if ($mark->{ip} =~ /[a-z]/i) {
-            nprint("+ Target IP:          (proxied)", "", $mark);
+        if ($mark->{ip} =~ /^$LW2::IPv4_re$/ || $mark->{ip} =~ /^$LW2::IPv6_re_inc_zoneid$/) {
+            nprint("+ Target IP:          $mark->{ip}", "", $mark);
         }
         else {
-            nprint("+ Target IP:          $mark->{ip}", "", $mark);
+            nprint("+ Target IP:          (proxied)", "", $mark);
         }
 
         nprint("+ Target Hostname:    $mark->{hostname}", "", $mark);

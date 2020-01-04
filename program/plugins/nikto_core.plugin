@@ -1089,7 +1089,7 @@ sub resolve {
         }
 
         if ( $ip !~ /^$LW2::IPv4_re$/ &&
-             $ip !~ /^\[$LW2::IPv6_re\]$/
+             $ip !~ /^$LW2::IPv6_re$/
         ) {
             nprint("+ ERROR: Invalid IP: $ip\n\n");
             exit;

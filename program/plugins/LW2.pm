@@ -155,7 +155,7 @@ $PACKAGE='LW2';
 
     $_SSL_LIBRARY = undef;
 
-    # These IPv4 & IPv6 regexps are from Regexp::Common::net
+    # These IPv4 & IPv6 regexps are from Regexp::IPv6
     our $IPv4_re = qr/((25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})[.](25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})[.](25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})[.](25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2}))/;
     my $G = "[0-9a-fA-F]{1,4}";
 
